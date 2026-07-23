@@ -1,8 +1,23 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { Home, Building2, ShieldCheck, ArrowRight, Sparkles, KeyRound } from 'lucide-react';
+import React, { useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../store/useAuthStore';
+import { Home, Building2, ShieldCheck, ArrowRight, Sparkles } from 'lucide-react';
 
 export const Gateway: React.FC = () => {
+  const navigate = useNavigate();
+  const { currentUser, isAuthenticated } = useAuthStore();
+
+  useEffect(() => {
+    if (isAuthenticated && currentUser) {
+      const dashboardMap: Record<string, string> = {
+        buyer: '/dashboard/buyer',
+        seller: '/dashboard/seller',
+        admin: '/dashboard/admin',
+      };
+      navigate(dashboardMap[currentUser.role] || '/dashboard/buyer', { replace: true });
+    }
+  }, [isAuthenticated, currentUser, navigate]);
+
   const portals = [
     {
       role: 'buyer',

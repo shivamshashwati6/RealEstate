@@ -3,12 +3,12 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../store/useAuthStore';
 import { usePropertyStore } from '../../store/usePropertyStore';
 import { useCompareStore } from '../../store/useCompareStore';
-import { Building2, Search, SlidersHorizontal, LogIn, PlusCircle, Menu, X, User, LayoutGrid } from 'lucide-react';
+import { Building2, Search, SlidersHorizontal, LogOut, PlusCircle, Menu, X, User, LayoutGrid } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { currentUser } = useAuthStore();
+  const { currentUser, isAuthenticated, signOut } = useAuthStore();
   const { openFormModal } = usePropertyStore();
   const { compareProperties, openCompareModal } = useCompareStore();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -17,6 +17,11 @@ export const Navbar: React.FC = () => {
     if (currentUser.role === 'admin') return '/dashboard/admin';
     if (currentUser.role === 'seller') return '/dashboard/seller';
     return '/dashboard/buyer';
+  };
+
+  const handleSignOut = () => {
+    signOut();
+    navigate('/', { replace: true });
   };
 
   const isActive = (path: string) => location.pathname === path;
@@ -65,19 +70,21 @@ export const Navbar: React.FC = () => {
               <span>Marketplace Catalog</span>
             </Link>
 
-            <Link
-              to={getDashboardPath()}
-              className={`px-4 py-2 rounded-xl font-semibold transition-all flex items-center gap-1.5 ${
-                location.pathname.startsWith('/dashboard')
-                  ? 'bg-emerald-500 text-slate-950 shadow-md font-bold'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800'
-              }`}
-            >
-              <User className="w-3.5 h-3.5" />
-              <span>
-                {currentUser.role === 'admin' ? 'Admin Command' : currentUser.role === 'seller' ? 'Seller Studio' : 'Buyer Dashboard'}
-              </span>
-            </Link>
+            {isAuthenticated && (
+              <Link
+                to={getDashboardPath()}
+                className={`px-4 py-2 rounded-xl font-semibold transition-all flex items-center gap-1.5 ${
+                  location.pathname.startsWith('/dashboard')
+                    ? 'bg-emerald-500 text-slate-950 shadow-md font-bold'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                }`}
+              >
+                <User className="w-3.5 h-3.5" />
+                <span>
+                  {currentUser.role === 'admin' ? 'Admin Command' : currentUser.role === 'seller' ? 'Seller Studio' : 'Buyer Dashboard'}
+                </span>
+              </Link>
+            )}
           </nav>
 
           {/* Action Tools & Persona Control */}
@@ -97,7 +104,7 @@ export const Navbar: React.FC = () => {
             )}
 
             {/* Seller Action Button */}
-            {(currentUser.role === 'seller' || currentUser.role === 'admin') && (
+            {isAuthenticated && (currentUser.role === 'seller' || currentUser.role === 'admin') && (
               <button
                 onClick={() => openFormModal(null)}
                 className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-emerald-500 text-slate-950 font-extrabold text-xs shadow-md hover:from-amber-400 hover:to-emerald-400 transition-all flex items-center gap-1.5"
@@ -107,28 +114,37 @@ export const Navbar: React.FC = () => {
               </button>
             )}
 
-            {/* User Profile Badge & Quick Gateway Login */}
-            <div className="flex items-center gap-2 pl-2 border-l border-slate-800">
-              <Link to={getDashboardPath()} className="flex items-center gap-2 group">
-                <img
-                  src={currentUser.avatar}
-                  alt={currentUser.name}
-                  className="w-8 h-8 rounded-full object-cover border border-emerald-500/40 group-hover:scale-105 transition-transform"
-                />
-                <div className="text-left hidden lg:block">
-                  <span className="block text-xs font-bold text-white group-hover:text-emerald-400 transition-colors line-clamp-1">{currentUser.name}</span>
-                  <span className="block text-[10px] text-slate-400 uppercase font-semibold">{currentUser.role}</span>
-                </div>
-              </Link>
+            {/* User Profile Badge & Sign Out Button */}
+            {isAuthenticated ? (
+              <div className="flex items-center gap-2 pl-2 border-l border-slate-800">
+                <Link to={getDashboardPath()} className="flex items-center gap-2 group">
+                  <img
+                    src={currentUser.avatar}
+                    alt={currentUser.name}
+                    className="w-8 h-8 rounded-full object-cover border border-emerald-500/40 group-hover:scale-105 transition-transform"
+                  />
+                  <div className="text-left hidden lg:block">
+                    <span className="block text-xs font-bold text-white group-hover:text-emerald-400 transition-colors line-clamp-1">{currentUser.name}</span>
+                    <span className="block text-[10px] text-slate-400 uppercase font-semibold">{currentUser.role}</span>
+                  </div>
+                </Link>
 
+                <button
+                  onClick={handleSignOut}
+                  className="p-2 rounded-xl text-slate-400 hover:text-rose-400 bg-slate-900 hover:bg-slate-800 border border-slate-800 transition-colors"
+                  title="Sign Out"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
               <Link
                 to="/"
-                className="p-2 rounded-xl text-slate-400 hover:text-white bg-slate-900 hover:bg-slate-800 border border-slate-800"
-                title="Switch Portal Account"
+                className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs"
               >
-                <LogIn className="w-4 h-4" />
+                Sign In
               </Link>
-            </div>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -160,13 +176,34 @@ export const Navbar: React.FC = () => {
           >
             Search & Browse Properties
           </Link>
-          <Link
-            to={getDashboardPath()}
-            onClick={() => setMobileMenuOpen(false)}
-            className="block text-sm font-semibold text-emerald-400 py-2"
-          >
-            {currentUser.role.toUpperCase()} Dashboard
-          </Link>
+          {isAuthenticated ? (
+            <>
+              <Link
+                to={getDashboardPath()}
+                onClick={() => setMobileMenuOpen(false)}
+                className="block text-sm font-semibold text-emerald-400 py-2 border-b border-slate-800"
+              >
+                {currentUser.role.toUpperCase()} Dashboard
+              </Link>
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  handleSignOut();
+                }}
+                className="block w-full text-left text-sm font-semibold text-rose-400 py-2"
+              >
+                Sign Out
+              </button>
+            </>
+          ) : (
+            <Link
+              to="/"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block text-sm font-semibold text-emerald-400 py-2"
+            >
+              Sign In to Portal
+            </Link>
+          )}
         </div>
       )}
     </header>

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useNotificationStore } from '../../store/useNotificationStore';
-import { supabase, isSupabaseConfigured } from '../../services/supabase';
+import type { UserRole } from '../../types';
 import { Building2, ArrowRight, AlertTriangle } from 'lucide-react';
 
 export const SellerLoginPage: React.FC = () => {
@@ -12,68 +12,27 @@ export const SellerLoginPage: React.FC = () => {
 
   const [email, setEmail] = useState('sarah.realty@example.com');
   const [password, setPassword] = useState('password123');
-  const [loading, setLoading] = useState(false);
   const [roleError, setRoleError] = useState<{ message: string; targetLink: string; targetRole: string } | null>(null);
 
-  const handleSellerLogin = async (e: React.FormEvent) => {
+  const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setRoleError(null);
-    setLoading(true);
 
-    if (isSupabaseConfigured && supabase) {
-      // 1. Authenticate credentials directly (No OTP)
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+    const existingUser = allUsers.find((u) => u.email.toLowerCase() === email.toLowerCase());
+
+    if (existingUser && existingUser.role !== 'seller') {
+      const correctRole = existingUser.role;
+      const targetLink = `/auth/${correctRole}/login`;
+      setRoleError({
+        message: `This account is registered as a ${correctRole.toUpperCase()}!`,
+        targetLink,
+        targetRole: correctRole,
       });
-
-      if (authError) {
-        setLoading(false);
-        addNotification('error', 'Authentication Failed', authError.message);
-        return;
-      }
-
-      // 2. Validate role in public.users
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('role')
-        .eq('id', data.user.id)
-        .single();
-
-      const fetchedRole = userData?.role || data.user.user_metadata?.role;
-
-      if (userError || fetchedRole !== 'seller') {
-        await supabase.auth.signOut();
-        setLoading(false);
-        const actualRole = fetchedRole || 'different role';
-        const targetLink = `/auth/${actualRole}/login`;
-        setRoleError({
-          message: `This account is registered as a ${actualRole.toUpperCase()}. Please log in through the correct portal.`,
-          targetLink,
-          targetRole: actualRole,
-        });
-        addNotification('error', 'Role Mismatch', `This account is registered as a ${actualRole.toUpperCase()}.`);
-        return;
-      }
-    } else {
-      const existingUser = allUsers.find((u) => u.email.toLowerCase() === email.toLowerCase());
-
-      if (existingUser && existingUser.role !== 'seller') {
-        const correctRole = existingUser.role;
-        const targetLink = `/auth/${correctRole}/login`;
-        setRoleError({
-          message: `This account is registered as a ${correctRole.toUpperCase()}!`,
-          targetLink,
-          targetRole: correctRole,
-        });
-        addNotification('error', 'Role Validation Failed', `Account ${email} belongs to a ${correctRole.toUpperCase()}. Please use the ${correctRole.toUpperCase()} login portal.`);
-        setLoading(false);
-        return;
-      }
+      addNotification('error', 'Role Validation Failed', `Account ${email} belongs to a ${correctRole.toUpperCase()}. Please use the ${correctRole.toUpperCase()} login portal.`);
+      return;
     }
 
     switchRole('seller');
-    setLoading(false);
     addNotification('success', 'Seller Studio Sign In', 'Welcome back to your Seller & Agent Studio!');
     navigate('/dashboard/seller');
   };
@@ -96,10 +55,10 @@ export const SellerLoginPage: React.FC = () => {
           <div className="bg-rose-950/80 border border-rose-800 p-4 rounded-2xl space-y-2 text-xs animate-shake">
             <div className="flex items-center gap-2 text-rose-400 font-bold">
               <AlertTriangle className="w-4 h-4 shrink-0" />
-              <span>Role Mismatch Warning</span>
+              <span>{roleError.message}</span>
             </div>
-            <p className="text-slate-300 text-[11px] leading-relaxed">
-              {roleError.message}
+            <p className="text-slate-300 text-[11px]">
+              You are attempting to sign in to the Seller Studio, but your account requires the <strong>{roleError.targetRole.toUpperCase()}</strong> portal.
             </p>
             <Link
               to={roleError.targetLink}
@@ -111,7 +70,7 @@ export const SellerLoginPage: React.FC = () => {
           </div>
         )}
 
-        <form onSubmit={handleSellerLogin} className="space-y-4 text-xs">
+        <form onSubmit={handleLogin} className="space-y-4 text-xs">
           <div>
             <label className="block font-semibold text-slate-300 mb-1">Business Email Address</label>
             <input
@@ -136,17 +95,10 @@ export const SellerLoginPage: React.FC = () => {
 
           <button
             type="submit"
-            disabled={loading}
             className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-emerald-500 text-slate-950 font-extrabold text-xs shadow-lg shadow-amber-500/20 hover:from-amber-400 hover:to-emerald-400 transition-all flex items-center justify-center gap-2"
           >
-            {loading ? (
-              <span>Authenticating Agent Credentials...</span>
-            ) : (
-              <>
-                <span>Sign In to Seller Studio</span>
-                <ArrowRight className="w-4 h-4" />
-              </>
-            )}
+            <span>Sign In to Seller Studio</span>
+            <ArrowRight className="w-4 h-4" />
           </button>
         </form>
 

@@ -1,10 +1,10 @@
--- ====================================================================
+-- ===================================================
 -- Real Estate Marketplace Platform (EstateMarket)
 -- PostgreSQL Database Schema & Row-Level Security (RLS)
--- Multi-Role Auth Sync Migration Script
--- ====================================================================
+-- Role-Based Multi-Dashboard Migration Script
+-- ===================================================
 
--- 1. Create Role Enum & Core Enums
+-- 1. Create Enums if not exists
 DO $$ BEGIN
     CREATE TYPE user_role AS ENUM ('buyer', 'seller', 'admin');
 EXCEPTION
@@ -41,43 +41,48 @@ EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
 
--- 2. Create Public Users Table (`public.users`)
+-- 2. Public Users Table (`public.users`)
 CREATE TABLE IF NOT EXISTS public.users (
-  id UUID REFERENCES auth.users ON DELETE CASCADE PRIMARY KEY,
-  full_name TEXT NOT NULL,
-  email TEXT UNIQUE NOT NULL,
-  phone TEXT,
-  role user_role NOT NULL DEFAULT 'buyer',
-  avatar_url TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    full_name TEXT NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    phone TEXT,
+    role user_role DEFAULT 'buyer'::user_role NOT NULL,
+    avatar_url TEXT,
+    bio TEXT,
+    is_verified BOOLEAN DEFAULT FALSE,
+    is_suspended BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
 
--- 3. Trigger to Sync Auth Metadata to public.users (No OTP required)
+-- 3. Automatic Trigger to Sync `auth.users` to `public.users`
 CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER AS $$ 
-BEGIN 
-  INSERT INTO public.users (id, email, full_name, role, phone, avatar_url) 
-  VALUES ( 
-    NEW.id, 
-    NEW.email, 
-    COALESCE(NEW.raw_user_meta_data->>'full_name', 'User'), 
-    COALESCE((NEW.raw_user_meta_data->>'role')::user_role, 'buyer'::user_role), 
-    NEW.raw_user_meta_data->>'phone',
-    NEW.raw_user_meta_data->>'avatar_url'
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.users (id, full_name, email, phone, role, avatar_url)
+  VALUES (
+    new.id,
+    COALESCE(new.raw_user_meta_data->>'full_name', split_part(new.email, '@', 1)),
+    new.email,
+    new.raw_user_meta_data->>'phone',
+    COALESCE((new.raw_user_meta_data->>'role')::public.user_role, 'buyer'::public.user_role),
+    new.raw_user_meta_data->>'avatar_url'
   )
   ON CONFLICT (id) DO UPDATE SET
     full_name = EXCLUDED.full_name,
     role = EXCLUDED.role,
     phone = EXCLUDED.phone,
     avatar_url = EXCLUDED.avatar_url;
-  RETURN NEW; 
-END; 
+  RETURN new;
+END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+-- Trigger attachment
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+  FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
 
 -- 4. Properties Table
 CREATE TABLE IF NOT EXISTS public.properties (
@@ -104,7 +109,7 @@ CREATE TABLE IF NOT EXISTS public.properties (
     address TEXT NOT NULL,
     city TEXT NOT NULL,
     state TEXT NOT NULL,
-    country TEXT DEFAULT 'United States' NOT NULL,
+    country TEXT DEFAULT 'India' NOT NULL,
     zip_code TEXT,
     latitude DOUBLE PRECISION NOT NULL,
     longitude DOUBLE PRECISION NOT NULL,
@@ -118,38 +123,33 @@ CREATE TABLE IF NOT EXISTS public.properties (
     updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
 
--- 5. Row-Level Security (RLS)
+-- 5. Row-Level Security (RLS) Policies
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.properties ENABLE ROW LEVEL SECURITY;
 
--- Users RLS Policies
-DROP POLICY IF EXISTS "Users can view own profile" ON public.users;
-CREATE POLICY "Users can view own profile" ON public.users
-  FOR SELECT USING (auth.uid() = id);
-
-DROP POLICY IF EXISTS "Public users profile viewable by all" ON public.users;
-CREATE POLICY "Public users profile viewable by all" ON public.users
-  FOR SELECT USING (true);
-
-DROP POLICY IF EXISTS "Admins have full access to all users" ON public.users;
-CREATE POLICY "Admins have full access to all users" ON public.users
-  FOR ALL USING (
-    EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'admin')
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM public.users
+    WHERE id = auth.uid() AND role = 'admin'
   );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Properties RLS Policies
-DROP POLICY IF EXISTS "Live properties viewable by all" ON public.properties;
+-- Users RLS
+CREATE POLICY "Public users viewable by all" ON public.users FOR SELECT USING (true);
+CREATE POLICY "Users update own profile" ON public.users FOR UPDATE USING (auth.uid() = id OR public.is_admin());
+
+-- Properties RLS
 CREATE POLICY "Live properties viewable by all" ON public.properties 
-  FOR SELECT USING (status = 'live' OR auth.uid() = owner_id OR EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'admin'));
+    FOR SELECT USING (status = 'live' OR auth.uid() = owner_id OR public.is_admin());
 
-DROP POLICY IF EXISTS "Sellers can insert properties" ON public.properties;
 CREATE POLICY "Sellers can insert properties" ON public.properties 
-  FOR INSERT WITH CHECK (auth.uid() = owner_id);
+    FOR INSERT WITH CHECK (auth.uid() = owner_id);
 
-DROP POLICY IF EXISTS "Owners and admins can update properties" ON public.properties;
 CREATE POLICY "Owners and admins can update properties" ON public.properties 
-  FOR UPDATE USING (auth.uid() = owner_id OR EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'admin'));
+    FOR UPDATE USING (auth.uid() = owner_id OR public.is_admin());
 
-DROP POLICY IF EXISTS "Owners and admins can delete properties" ON public.properties;
 CREATE POLICY "Owners and admins can delete properties" ON public.properties 
-  FOR DELETE USING (auth.uid() = owner_id OR EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'admin'));
+    FOR DELETE USING (auth.uid() = owner_id OR public.is_admin());

@@ -4,21 +4,26 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { usePropertyStore } from '../../store/usePropertyStore';
 import { useCompareStore } from '../../store/useCompareStore';
 import { useChatStore } from '../../store/useChatStore';
-import { Building2, Search, Heart, SlidersHorizontal, MessageSquare, LogIn, PlusCircle, Menu, X, User } from 'lucide-react';
+import { Building2, SlidersHorizontal, LogIn, PlusCircle, Menu, X, User, Shield, Building } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { currentUser } = useAuthStore();
-  const { userFavorites, openFormModal } = usePropertyStore();
+  const { openFormModal } = usePropertyStore();
   const { compareProperties, openCompareModal } = useCompareStore();
-  const { unreadCount } = useChatStore();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const getDashboardPath = () => {
     if (currentUser.role === 'admin') return '/dashboard/admin';
     if (currentUser.role === 'seller') return '/dashboard/seller';
     return '/dashboard/buyer';
+  };
+
+  const getLoginPath = () => {
+    if (currentUser.role === 'admin') return '/auth/admin/login';
+    if (currentUser.role === 'seller') return '/auth/seller/login';
+    return '/auth/buyer/login';
   };
 
   const isActive = (path: string) => location.pathname === path;
@@ -80,7 +85,7 @@ export const Navbar: React.FC = () => {
             </Link>
           </nav>
 
-          {/* Action Tools & Persona Control */}
+          {/* Action Tools & Role Portal Login Links */}
           <div className="hidden md:flex items-center gap-3">
             {/* Compare Drawer Trigger */}
             {compareProperties.length > 0 && (
@@ -107,7 +112,7 @@ export const Navbar: React.FC = () => {
               </button>
             )}
 
-            {/* User Profile Badge & Quick Logout / Login */}
+            {/* User Profile Badge & Quick Portal Switcher */}
             <div className="flex items-center gap-2 pl-2 border-l border-slate-800">
               <Link to={getDashboardPath()} className="flex items-center gap-2 group">
                 <img
@@ -122,9 +127,9 @@ export const Navbar: React.FC = () => {
               </Link>
 
               <Link
-                to="/auth/login"
+                to={getLoginPath()}
                 className="p-2 rounded-xl text-slate-400 hover:text-white bg-slate-900 hover:bg-slate-800 border border-slate-800"
-                title="Sign In / Switch Account"
+                title="Role Sign In Portal"
               >
                 <LogIn className="w-4 h-4" />
               </Link>
@@ -167,13 +172,17 @@ export const Navbar: React.FC = () => {
           >
             {currentUser.role.toUpperCase()} Dashboard Portal
           </Link>
-          <Link
-            to="/auth/login"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block text-sm font-semibold text-slate-400 py-2"
-          >
-            Sign In / Register
-          </Link>
+          <div className="pt-2 flex flex-col gap-2 text-xs font-semibold">
+            <Link to="/auth/buyer/login" onClick={() => setMobileMenuOpen(false)} className="text-emerald-400">
+              Buyer Portal Login
+            </Link>
+            <Link to="/auth/seller/login" onClick={() => setMobileMenuOpen(false)} className="text-amber-400">
+              Seller Portal Login
+            </Link>
+            <Link to="/auth/admin/login" onClick={() => setMobileMenuOpen(false)} className="text-rose-400">
+              Admin Portal Login
+            </Link>
+          </div>
         </div>
       )}
     </header>

@@ -1,34 +1,30 @@
 import React from 'react';
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../store/useAuthStore';
 import type { UserRole } from '../../types';
 
 interface ProtectedRouteProps {
-  allowedRoles?: UserRole[];
+  requiredRole: UserRole;
   children?: React.ReactNode;
 }
 
-export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles, children }) => {
+export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ requiredRole, children }) => {
   const { currentUser } = useAuthStore();
+  const location = useLocation();
 
-  // If no user is logged in or user is suspended
-  if (!currentUser || currentUser.isSuspended) {
-    return <Navigate to="/auth/login" replace />;
+  // Redirect to the specific login page for the attempted portal if unauthenticated
+  if (!currentUser) {
+    return <Navigate to={`/auth/${requiredRole}/login`} state={{ from: location }} replace />;
   }
 
-  // Role enforcement
-  if (allowedRoles && allowedRoles.length > 0) {
-    if (!allowedRoles.includes(currentUser.role)) {
-      // Bounce to assigned role dashboard
-      const roleDashboardMap: Record<UserRole, string> = {
-        buyer: '/dashboard/buyer',
-        seller: '/dashboard/seller',
-        admin: '/dashboard/admin',
-      };
-
-      const targetPath = roleDashboardMap[currentUser.role] || '/dashboard/buyer';
-      return <Navigate to={targetPath} replace />;
-    }
+  // If authenticated as a different role, bounce to their authorized dashboard
+  if (currentUser.role !== requiredRole) {
+    const defaultDashboards: Record<UserRole, string> = {
+      buyer: '/dashboard/buyer',
+      seller: '/dashboard/seller',
+      admin: '/dashboard/admin',
+    };
+    return <Navigate to={defaultDashboards[currentUser.role]} replace />;
   }
 
   return children ? <>{children}</> : <Outlet />;

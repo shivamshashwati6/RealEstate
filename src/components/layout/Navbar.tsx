@@ -1,27 +1,33 @@
 import React from 'react';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useCompareStore } from '../../store/useCompareStore';
 import { usePropertyStore } from '../../store/usePropertyStore';
 import { useChatStore } from '../../store/useChatStore';
-import { Building2, Search, Heart, Scale, MessageSquare, PlusCircle, LayoutDashboard, Shield } from 'lucide-react';
+import { Building2, Search, Heart, Scale, MessageSquare, PlusCircle, LayoutDashboard, Shield, LogOut } from 'lucide-react';
 
-interface NavbarProps {
-  activeTab: string;
-  setActiveTab: (tab: string) => void;
-}
+export const Navbar: React.FC = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
 
-export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
-  const { currentUser, openAuthModal } = useAuthStore();
+  const { currentUserProfile, role, signOut } = useAuthStore();
   const { compareProperties, openCompareModal } = useCompareStore();
   const { userFavorites, openFormModal } = usePropertyStore();
   const { openChatWithSeller } = useChatStore();
+
+  const activePath = location.pathname;
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/', { replace: true });
+  };
 
   return (
     <header className="sticky top-[35px] z-40 bg-slate-900/80 backdrop-blur-xl border-b border-slate-800/80 transition-all">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
         {/* Brand Logo */}
-        <div 
-          onClick={() => setActiveTab('home')} 
+        <Link 
+          to="/" 
           className="flex items-center gap-2.5 cursor-pointer group"
         >
           <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 p-0.5 shadow-lg shadow-emerald-500/20 group-hover:scale-105 transition-transform duration-200">
@@ -35,79 +41,68 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
             </span>
             <span className="block text-[10px] text-slate-400 font-medium tracking-wide uppercase">Real Estate Platform</span>
           </div>
-        </div>
+        </Link>
 
         {/* Navigation Links */}
         <nav className="hidden md:flex items-center gap-1 bg-slate-950/60 p-1.5 rounded-full border border-slate-800/60">
-          <button
-            onClick={() => setActiveTab('home')}
-            className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
-              activeTab === 'home'
-                ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
-                : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
-            }`}
-          >
-            Home
-          </button>
-
-          <button
-            onClick={() => setActiveTab('search')}
+          <Link
+            to="/properties"
             className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
-              activeTab === 'search'
+              activePath === '/properties' || activePath === '/'
                 ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
                 : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
             }`}
           >
             <Search className="w-3.5 h-3.5" />
             Explore Properties
-          </button>
+          </Link>
 
-          {currentUser.role === 'buyer' && (
-            <button
-              onClick={() => setActiveTab('buyer-dashboard')}
+          {role === 'buyer' && (
+            <Link
+              to="/dashboard/buyer"
               className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                activeTab === 'buyer-dashboard'
+                activePath === '/dashboard/buyer'
                   ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
                   : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
               }`}
             >
               <LayoutDashboard className="w-3.5 h-3.5" />
-              My Visits & Saved
-            </button>
+              Buyer Dashboard
+            </Link>
           )}
 
-          {currentUser.role === 'seller' && (
-            <button
-              onClick={() => setActiveTab('seller-dashboard')}
+          {role === 'seller' && (
+            <Link
+              to="/dashboard/seller"
               className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                activeTab === 'seller-dashboard'
+                activePath === '/dashboard/seller'
                   ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
                   : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
               }`}
             >
               <LayoutDashboard className="w-3.5 h-3.5" />
               Seller Studio
-            </button>
+            </Link>
           )}
 
-          {currentUser.role === 'admin' && (
-            <button
-              onClick={() => setActiveTab('admin-dashboard')}
+          {role === 'admin' && (
+            <Link
+              to="/dashboard/admin"
               className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                activeTab === 'admin-dashboard'
+                activePath === '/dashboard/admin'
                   ? 'bg-rose-500 text-white shadow-md shadow-rose-500/20'
                   : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
               }`}
             >
               <Shield className="w-3.5 h-3.5" />
               Admin Portal
-            </button>
+            </Link>
           )}
         </nav>
 
         {/* Action Widgets */}
         <div className="flex items-center gap-2.5">
-          {(currentUser.role === 'seller' || currentUser.role === 'admin') && (
+          {(role === 'seller' || role === 'admin') && (
             <button
               onClick={() => openFormModal(null)}
               className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold text-xs shadow-lg shadow-emerald-500/20 transition-all transform hover:-translate-y-0.5"
@@ -131,7 +126,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
           </button>
 
           <button
-            onClick={() => setActiveTab('buyer-dashboard')}
+            onClick={() => navigate('/dashboard/buyer')}
             className="relative p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-rose-400 border border-slate-700/60 transition-colors"
             title="Favorites"
           >
@@ -164,17 +159,35 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
           </button>
 
           <div className="pl-2 border-l border-slate-800 flex items-center gap-2">
-            <button
-              onClick={() => openAuthModal('login')}
-              className="flex items-center gap-2 p-1 pl-2.5 pr-1.5 rounded-full bg-slate-800/90 border border-slate-700/80 hover:border-slate-600 transition-all"
-            >
-              <span className="text-xs font-semibold text-slate-200 hidden sm:inline">{currentUser.name.split(' ')[0]}</span>
-              <img
-                src={currentUser.avatar}
-                alt={currentUser.name}
-                className="w-7 h-7 rounded-full object-cover border border-slate-600"
-              />
-            </button>
+            {currentUserProfile ? (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => role && navigate(`/dashboard/${role}`)}
+                  className="flex items-center gap-2 p-1 pl-2.5 pr-1.5 rounded-full bg-slate-800/90 border border-slate-700/80 hover:border-slate-600 transition-all"
+                >
+                  <span className="text-xs font-semibold text-slate-200 hidden sm:inline">{currentUserProfile.name.split(' ')[0]}</span>
+                  <img
+                    src={currentUserProfile.avatar}
+                    alt={currentUserProfile.name}
+                    className="w-7 h-7 rounded-full object-cover border border-slate-600"
+                  />
+                </button>
+                <button
+                  onClick={handleSignOut}
+                  className="p-2 rounded-xl bg-slate-800/80 hover:bg-rose-950 text-slate-400 hover:text-rose-400 transition-colors"
+                  title="Sign Out"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <Link
+                to="/auth/buyer/login"
+                className="px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-md"
+              >
+                Sign In
+              </Link>
+            )}
           </div>
         </div>
       </div>

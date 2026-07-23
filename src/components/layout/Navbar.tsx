@@ -3,16 +3,14 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../store/useAuthStore';
 import { usePropertyStore } from '../../store/usePropertyStore';
 import { useCompareStore } from '../../store/useCompareStore';
-import { useChatStore } from '../../store/useChatStore';
-import { Building2, Search, Heart, SlidersHorizontal, MessageSquare, LogIn, PlusCircle, Menu, X, User } from 'lucide-react';
+import { Building2, Search, SlidersHorizontal, LogIn, PlusCircle, Menu, X, User, LayoutGrid } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { currentUser } = useAuthStore();
-  const { userFavorites, openFormModal } = usePropertyStore();
+  const { openFormModal } = usePropertyStore();
   const { compareProperties, openCompareModal } = useCompareStore();
-  const { unreadCount } = useChatStore();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const getDashboardPath = () => {
@@ -49,20 +47,22 @@ export const Navbar: React.FC = () => {
           <nav className="hidden md:flex items-center gap-1 bg-slate-900/80 p-1.5 rounded-2xl border border-slate-800 text-xs">
             <Link
               to="/"
-              className={`px-4 py-2 rounded-xl font-semibold transition-all ${
+              className={`px-4 py-2 rounded-xl font-semibold transition-all flex items-center gap-1.5 ${
                 isActive('/') ? 'bg-emerald-500 text-slate-950 shadow-md font-bold' : 'text-slate-300 hover:text-white hover:bg-slate-800'
               }`}
             >
-              Home
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span>Portal Gateway</span>
             </Link>
 
             <Link
-              to="/search"
-              className={`px-4 py-2 rounded-xl font-semibold transition-all ${
-                isActive('/search') ? 'bg-emerald-500 text-slate-950 shadow-md font-bold' : 'text-slate-300 hover:text-white hover:bg-slate-800'
+              to="/marketplace"
+              className={`px-4 py-2 rounded-xl font-semibold transition-all flex items-center gap-1.5 ${
+                isActive('/marketplace') || isActive('/search') ? 'bg-emerald-500 text-slate-950 shadow-md font-bold' : 'text-slate-300 hover:text-white hover:bg-slate-800'
               }`}
             >
-              Search & Map
+              <Search className="w-3.5 h-3.5" />
+              <span>Marketplace Catalog</span>
             </Link>
 
             <Link
@@ -75,7 +75,7 @@ export const Navbar: React.FC = () => {
             >
               <User className="w-3.5 h-3.5" />
               <span>
-                {currentUser.role === 'admin' ? 'Admin Portal' : currentUser.role === 'seller' ? 'Seller Studio' : 'Buyer Dashboard'}
+                {currentUser.role === 'admin' ? 'Admin Command' : currentUser.role === 'seller' ? 'Seller Studio' : 'Buyer Dashboard'}
               </span>
             </Link>
           </nav>
@@ -107,7 +107,7 @@ export const Navbar: React.FC = () => {
               </button>
             )}
 
-            {/* User Profile Badge & Quick Logout / Login */}
+            {/* User Profile Badge & Quick Gateway Login */}
             <div className="flex items-center gap-2 pl-2 border-l border-slate-800">
               <Link to={getDashboardPath()} className="flex items-center gap-2 group">
                 <img
@@ -122,9 +122,9 @@ export const Navbar: React.FC = () => {
               </Link>
 
               <Link
-                to="/auth/login"
+                to="/"
                 className="p-2 rounded-xl text-slate-400 hover:text-white bg-slate-900 hover:bg-slate-800 border border-slate-800"
-                title="Sign In / Switch Account"
+                title="Switch Portal Account"
               >
                 <LogIn className="w-4 h-4" />
               </Link>
@@ -151,28 +151,21 @@ export const Navbar: React.FC = () => {
             onClick={() => setMobileMenuOpen(false)}
             className="block text-sm font-semibold text-slate-200 py-2 border-b border-slate-800"
           >
-            Home Overview
+            Portal Gateway Landing Page
           </Link>
           <Link
-            to="/search"
+            to="/marketplace"
             onClick={() => setMobileMenuOpen(false)}
             className="block text-sm font-semibold text-slate-200 py-2 border-b border-slate-800"
           >
-            Search & Map Properties
+            Search & Browse Properties
           </Link>
           <Link
             to={getDashboardPath()}
             onClick={() => setMobileMenuOpen(false)}
-            className="block text-sm font-semibold text-emerald-400 py-2 border-b border-slate-800"
+            className="block text-sm font-semibold text-emerald-400 py-2"
           >
-            {currentUser.role.toUpperCase()} Dashboard Portal
-          </Link>
-          <Link
-            to="/auth/login"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block text-sm font-semibold text-slate-400 py-2"
-          >
-            Sign In / Register
+            {currentUser.role.toUpperCase()} Dashboard
           </Link>
         </div>
       )}

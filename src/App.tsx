@@ -6,19 +6,20 @@ import { Footer } from './components/layout/Footer';
 import { ToastContainer } from './components/common/ToastContainer';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 
-// Public Pages
+// Gateway & Public Pages
+import { Gateway } from './pages/Gateway';
 import { HomePage } from './pages/HomePage';
 import { SearchPage } from './pages/SearchPage';
 import { PropertyDetailPage } from './pages/PropertyDetailPage';
 
-// Auth Pages
-import LoginGateway from './pages/auth/LoginGateway';
-import { LoginPage } from './pages/auth/LoginPage';
-import { RegisterBuyerPage } from './pages/auth/RegisterBuyerPage';
-import { RegisterSellerPage } from './pages/auth/RegisterSellerPage';
-import { RegisterAdminPage } from './pages/auth/RegisterAdminPage';
+// Dedicated Isolated Auth Pages
+import { BuyerLoginPage } from './pages/auth/BuyerLoginPage';
+import { BuyerRegisterPage } from './pages/auth/BuyerRegisterPage';
+import { SellerLoginPage } from './pages/auth/SellerLoginPage';
+import { SellerRegisterPage } from './pages/auth/SellerRegisterPage';
+import { AdminLoginPage } from './pages/auth/AdminLoginPage';
 
-// Dashboards
+// Role Dashboards
 import { BuyerDashboardPage } from './pages/BuyerDashboardPage';
 import { SellerDashboardPage } from './pages/SellerDashboardPage';
 import { AdminDashboardPage } from './pages/AdminDashboardPage';
@@ -39,7 +40,7 @@ function PropertyDetailWrapper() {
   const property = properties.find((p) => p.id === id);
 
   if (!property) {
-    return <Navigate to="/search" replace />;
+    return <Navigate to="/marketplace" replace />;
   }
 
   return (
@@ -60,7 +61,7 @@ function MainLayout() {
   };
 
   const handleNavigateToSearch = (query?: string, city?: string, type?: string) => {
-    navigate('/search');
+    navigate('/marketplace');
   };
 
   return (
@@ -71,12 +72,23 @@ function MainLayout() {
       {/* 2. Header Navbar */}
       <Navbar />
 
-      {/* 3. Main Route Outlet Content */}
+      {/* 3. Main Route Content */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <Routes>
-          {/* Public Routes */}
+          {/* Starting Portal Gateway Landing Page */}
+          <Route path="/" element={<Gateway />} />
+
+          {/* Marketplace Catalog & Detailed Search */}
           <Route
-            path="/"
+            path="/marketplace"
+            element={<SearchPage onSelectProperty={handleSelectProperty} />}
+          />
+          <Route
+            path="/search"
+            element={<SearchPage onSelectProperty={handleSelectProperty} />}
+          />
+          <Route
+            path="/home"
             element={
               <HomePage
                 onSelectProperty={handleSelectProperty}
@@ -84,39 +96,30 @@ function MainLayout() {
               />
             }
           />
-
-          <Route
-            path="/search"
-            element={
-              <SearchPage
-                onSelectProperty={handleSelectProperty}
-              />
-            }
-          />
-
           <Route path="/property/:id" element={<PropertyDetailWrapper />} />
 
-          {/* Auth Gateway & Role-Specific Auth Routes */}
-          <Route path="/auth/login" element={<LoginGateway />} />
-          <Route path="/auth/buyer/login" element={<LoginPage forcedRole="buyer" />} />
-          <Route path="/auth/buyer/register" element={<RegisterBuyerPage />} />
+          {/* Isolated Buyer Authentication Suite */}
+          <Route path="/auth/buyer/login" element={<BuyerLoginPage />} />
+          <Route path="/auth/buyer/register" element={<BuyerRegisterPage />} />
 
-          <Route path="/auth/seller/login" element={<LoginPage forcedRole="seller" />} />
-          <Route path="/auth/seller/register" element={<RegisterSellerPage />} />
+          {/* Isolated Seller / Agent Authentication Suite */}
+          <Route path="/auth/seller/login" element={<SellerLoginPage />} />
+          <Route path="/auth/seller/register" element={<SellerRegisterPage />} />
 
-          <Route path="/auth/admin/login" element={<LoginPage forcedRole="admin" />} />
-          <Route path="/auth/admin/register" element={<RegisterAdminPage />} />
+          {/* Isolated Admin Authentication Suite */}
+          <Route path="/auth/admin/login" element={<AdminLoginPage />} />
 
-          {/* Legacy Auth Fallback Aliases */}
-          <Route path="/auth/register/buyer" element={<RegisterBuyerPage />} />
-          <Route path="/auth/register/seller" element={<RegisterSellerPage />} />
-          <Route path="/auth/register/admin" element={<RegisterAdminPage />} />
+          {/* Legacy & Short URL Auth Aliases */}
+          <Route path="/auth/login" element={<Navigate to="/" replace />} />
+          <Route path="/auth/register/buyer" element={<BuyerRegisterPage />} />
+          <Route path="/auth/register/seller" element={<SellerRegisterPage />} />
+          <Route path="/auth/register/admin" element={<AdminLoginPage />} />
 
-          {/* Role Protected Dashboard Routes */}
+          {/* Role-Guarded Dashboards */}
           <Route
             path="/dashboard/buyer/*"
             element={
-              <ProtectedRoute allowedRoles={['buyer']}>
+              <ProtectedRoute requiredRole="buyer">
                 <BuyerDashboardPage onSelectProperty={handleSelectProperty} />
               </ProtectedRoute>
             }
@@ -125,7 +128,7 @@ function MainLayout() {
           <Route
             path="/dashboard/seller/*"
             element={
-              <ProtectedRoute allowedRoles={['seller']}>
+              <ProtectedRoute requiredRole="seller">
                 <SellerDashboardPage onSelectProperty={handleSelectProperty} />
               </ProtectedRoute>
             }
@@ -134,13 +137,13 @@ function MainLayout() {
           <Route
             path="/dashboard/admin/*"
             element={
-              <ProtectedRoute allowedRoles={['admin']}>
+              <ProtectedRoute requiredRole="admin">
                 <AdminDashboardPage onSelectProperty={handleSelectProperty} />
               </ProtectedRoute>
             }
           />
 
-          {/* Catch-all Fallback Redirect */}
+          {/* Fallback Redirect to Gateway */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
@@ -153,7 +156,7 @@ function MainLayout() {
       <PropertyCompareModal />
       <PropertyFormModal />
 
-      {/* 6. Notification Host */}
+      {/* 6. Toast Notification Host */}
       <ToastContainer />
     </div>
   );

@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useNotificationStore } from '../../store/useNotificationStore';
-import type { UserRole } from '../../types';
-import { Home, ArrowRight, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { supabase, isSupabaseConfigured } from '../../services/supabase';
+import { Home, ArrowRight, AlertTriangle } from 'lucide-react';
 
 export const BuyerLoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -12,28 +12,72 @@ export const BuyerLoginPage: React.FC = () => {
 
   const [email, setEmail] = useState('alex.buyer@example.com');
   const [password, setPassword] = useState('password123');
+  const [loading, setLoading] = useState(false);
   const [roleError, setRoleError] = useState<{ message: string; targetLink: string; targetRole: string } | null>(null);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleBuyerLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setRoleError(null);
+    setLoading(true);
 
-    // Look up account in users directory
-    const existingUser = allUsers.find((u) => u.email.toLowerCase() === email.toLowerCase());
+    let userRole = 'buyer';
 
-    if (existingUser && existingUser.role !== 'buyer') {
-      const correctRole = existingUser.role;
-      const targetLink = `/auth/${correctRole}/login`;
-      setRoleError({
-        message: `This account is registered as a ${correctRole.toUpperCase()}!`,
-        targetLink,
-        targetRole: correctRole,
+    if (isSupabaseConfigured && supabase) {
+      // 1. Authenticate credentials directly (No OTP)
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
-      addNotification('error', 'Role Validation Failed', `Account ${email} belongs to a ${correctRole.toUpperCase()}. Please use the ${correctRole.toUpperCase()} login portal.`);
-      return;
+
+      if (authError) {
+        setLoading(false);
+        addNotification('error', 'Authentication Failed', authError.message);
+        return;
+      }
+
+      // 2. Validate role in public.users
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', data.user.id)
+        .single();
+
+      const fetchedRole = userData?.role || data.user.user_metadata?.role;
+
+      if (userError || fetchedRole !== 'buyer') {
+        await supabase.auth.signOut();
+        setLoading(false);
+        const actualRole = fetchedRole || 'different role';
+        const targetLink = `/auth/${actualRole}/login`;
+        setRoleError({
+          message: `This account is registered as a ${actualRole.toUpperCase()}. Please log in through the correct portal.`,
+          targetLink,
+          targetRole: actualRole,
+        });
+        addNotification('error', 'Role Mismatch', `This account is registered as a ${actualRole.toUpperCase()}.`);
+        return;
+      }
+      userRole = fetchedRole;
+    } else {
+      // Demo state role validation
+      const existingUser = allUsers.find((u) => u.email.toLowerCase() === email.toLowerCase());
+
+      if (existingUser && existingUser.role !== 'buyer') {
+        const correctRole = existingUser.role;
+        const targetLink = `/auth/${correctRole}/login`;
+        setRoleError({
+          message: `This account is registered as a ${correctRole.toUpperCase()}!`,
+          targetLink,
+          targetRole: correctRole,
+        });
+        addNotification('error', 'Role Validation Failed', `Account ${email} belongs to a ${correctRole.toUpperCase()}. Please use the ${correctRole.toUpperCase()} login portal.`);
+        setLoading(false);
+        return;
+      }
     }
 
     switchRole('buyer');
+    setLoading(false);
     addNotification('success', 'Buyer Sign In Success', 'Welcome back to your Home Seeker Dashboard!');
     navigate('/dashboard/buyer');
   };
@@ -56,10 +100,10 @@ export const BuyerLoginPage: React.FC = () => {
           <div className="bg-rose-950/80 border border-rose-800 p-4 rounded-2xl space-y-2 text-xs animate-shake">
             <div className="flex items-center gap-2 text-rose-400 font-bold">
               <AlertTriangle className="w-4 h-4 shrink-0" />
-              <span>{roleError.message}</span>
+              <span>Role Mismatch Warning</span>
             </div>
-            <p className="text-slate-300 text-[11px]">
-              You are trying to log in at the Buyer Portal, but your account requires the <strong>{roleError.targetRole.toUpperCase()}</strong> portal.
+            <p className="text-slate-300 text-[11px] leading-relaxed">
+              {roleError.message}
             </p>
             <Link
               to={roleError.targetLink}
@@ -71,7 +115,7 @@ export const BuyerLoginPage: React.FC = () => {
           </div>
         )}
 
-        <form onSubmit={handleLogin} className="space-y-4 text-xs">
+        <form onSubmit={handleBuyerLogin} className="space-y-4 text-xs">
           <div>
             <label className="block font-semibold text-slate-300 mb-1">Email Address</label>
             <input
@@ -96,10 +140,17 @@ export const BuyerLoginPage: React.FC = () => {
 
           <button
             type="submit"
+            disabled={loading}
             className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-extrabold text-xs shadow-lg shadow-emerald-500/20 hover:from-emerald-400 hover:to-teal-400 transition-all flex items-center justify-center gap-2"
           >
-            <span>Sign In to Buyer Portal</span>
-            <ArrowRight className="w-4 h-4" />
+            {loading ? (
+              <span>Authenticating Credentials...</span>
+            ) : (
+              <>
+                <span>Sign In to Buyer Portal</span>
+                <ArrowRight className="w-4 h-4" />
+              </>
+            )}
           </button>
         </form>
 

@@ -1,211 +1,183 @@
-import React, { useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import React from 'react';
 import { useAuthStore } from '../../store/useAuthStore';
-import { usePropertyStore } from '../../store/usePropertyStore';
 import { useCompareStore } from '../../store/useCompareStore';
-import { Building2, Search, SlidersHorizontal, LogOut, PlusCircle, Menu, X, User, LayoutGrid } from 'lucide-react';
+import { usePropertyStore } from '../../store/usePropertyStore';
+import { useChatStore } from '../../store/useChatStore';
+import { Building2, Search, Heart, Scale, MessageSquare, PlusCircle, LayoutDashboard, Shield } from 'lucide-react';
 
-export const Navbar: React.FC = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { currentUser, isAuthenticated, signOut } = useAuthStore();
-  const { openFormModal } = usePropertyStore();
+interface NavbarProps {
+  activeTab: string;
+  setActiveTab: (tab: string) => void;
+}
+
+export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab }) => {
+  const { currentUser, openAuthModal } = useAuthStore();
   const { compareProperties, openCompareModal } = useCompareStore();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  const getDashboardPath = () => {
-    if (currentUser.role === 'admin') return '/dashboard/admin';
-    if (currentUser.role === 'seller') return '/dashboard/seller';
-    return '/dashboard/buyer';
-  };
-
-  const handleSignOut = () => {
-    signOut();
-    navigate('/', { replace: true });
-  };
-
-  const isActive = (path: string) => location.pathname === path;
+  const { userFavorites, openFormModal } = usePropertyStore();
+  const { openChatWithSeller } = useChatStore();
 
   return (
-    <header className="sticky top-8 z-40 bg-slate-950/80 border-b border-slate-800 backdrop-blur-xl">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          
-          {/* Logo & Brand */}
-          <Link to="/" className="flex items-center gap-2.5 group">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-500 via-teal-400 to-sky-400 p-0.5 shadow-lg shadow-emerald-500/20 group-hover:scale-105 transition-transform">
-              <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">
-                <Building2 className="w-5 h-5 text-emerald-400" />
-              </div>
+    <header className="sticky top-[35px] z-40 bg-slate-900/80 backdrop-blur-xl border-b border-slate-800/80 transition-all">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+        {/* Brand Logo */}
+        <div 
+          onClick={() => setActiveTab('home')} 
+          className="flex items-center gap-2.5 cursor-pointer group"
+        >
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 p-0.5 shadow-lg shadow-emerald-500/20 group-hover:scale-105 transition-transform duration-200">
+            <div className="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
+              <Building2 className="w-5 h-5 text-emerald-400" />
             </div>
-            <div>
-              <span className="text-base font-extrabold text-white tracking-tight group-hover:text-emerald-400 transition-colors">
-                Estate<span className="text-emerald-400">Market</span>
-              </span>
-              <span className="block text-[9px] text-slate-400 font-semibold tracking-wider uppercase">
-                Real Estate Platform
-              </span>
-            </div>
-          </Link>
-
-          {/* Desktop Navigation Links */}
-          <nav className="hidden md:flex items-center gap-1 bg-slate-900/80 p-1.5 rounded-2xl border border-slate-800 text-xs">
-            <Link
-              to="/"
-              className={`px-4 py-2 rounded-xl font-semibold transition-all flex items-center gap-1.5 ${
-                isActive('/') ? 'bg-emerald-500 text-slate-950 shadow-md font-bold' : 'text-slate-300 hover:text-white hover:bg-slate-800'
-              }`}
-            >
-              <LayoutGrid className="w-3.5 h-3.5" />
-              <span>Portal Gateway</span>
-            </Link>
-
-            <Link
-              to="/marketplace"
-              className={`px-4 py-2 rounded-xl font-semibold transition-all flex items-center gap-1.5 ${
-                isActive('/marketplace') || isActive('/search') ? 'bg-emerald-500 text-slate-950 shadow-md font-bold' : 'text-slate-300 hover:text-white hover:bg-slate-800'
-              }`}
-            >
-              <Search className="w-3.5 h-3.5" />
-              <span>Marketplace Catalog</span>
-            </Link>
-
-            {isAuthenticated && (
-              <Link
-                to={getDashboardPath()}
-                className={`px-4 py-2 rounded-xl font-semibold transition-all flex items-center gap-1.5 ${
-                  location.pathname.startsWith('/dashboard')
-                    ? 'bg-emerald-500 text-slate-950 shadow-md font-bold'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-800'
-                }`}
-              >
-                <User className="w-3.5 h-3.5" />
-                <span>
-                  {currentUser.role === 'admin' ? 'Admin Command' : currentUser.role === 'seller' ? 'Seller Studio' : 'Buyer Dashboard'}
-                </span>
-              </Link>
-            )}
-          </nav>
-
-          {/* Action Tools & Persona Control */}
-          <div className="hidden md:flex items-center gap-3">
-            {/* Compare Drawer Trigger */}
-            {compareProperties.length > 0 && (
-              <button
-                onClick={openCompareModal}
-                className="relative p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-emerald-400 transition-colors"
-                title="Compare Properties"
-              >
-                <SlidersHorizontal className="w-4 h-4" />
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 text-slate-950 font-bold text-[10px] rounded-full flex items-center justify-center shadow">
-                  {compareProperties.length}
-                </span>
-              </button>
-            )}
-
-            {/* Seller Action Button */}
-            {isAuthenticated && (currentUser.role === 'seller' || currentUser.role === 'admin') && (
-              <button
-                onClick={() => openFormModal(null)}
-                className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-emerald-500 text-slate-950 font-extrabold text-xs shadow-md hover:from-amber-400 hover:to-emerald-400 transition-all flex items-center gap-1.5"
-              >
-                <PlusCircle className="w-4 h-4" />
-                <span>List Property</span>
-              </button>
-            )}
-
-            {/* User Profile Badge & Sign Out Button */}
-            {isAuthenticated ? (
-              <div className="flex items-center gap-2 pl-2 border-l border-slate-800">
-                <Link to={getDashboardPath()} className="flex items-center gap-2 group">
-                  <img
-                    src={currentUser.avatar}
-                    alt={currentUser.name}
-                    className="w-8 h-8 rounded-full object-cover border border-emerald-500/40 group-hover:scale-105 transition-transform"
-                  />
-                  <div className="text-left hidden lg:block">
-                    <span className="block text-xs font-bold text-white group-hover:text-emerald-400 transition-colors line-clamp-1">{currentUser.name}</span>
-                    <span className="block text-[10px] text-slate-400 uppercase font-semibold">{currentUser.role}</span>
-                  </div>
-                </Link>
-
-                <button
-                  onClick={handleSignOut}
-                  className="p-2 rounded-xl text-slate-400 hover:text-rose-400 bg-slate-900 hover:bg-slate-800 border border-slate-800 transition-colors"
-                  title="Sign Out"
-                >
-                  <LogOut className="w-4 h-4" />
-                </button>
-              </div>
-            ) : (
-              <Link
-                to="/"
-                className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs"
-              >
-                Sign In
-              </Link>
-            )}
           </div>
+          <div>
+            <span className="text-xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
+              Estate<span className="text-emerald-400">Market</span>
+            </span>
+            <span className="block text-[10px] text-slate-400 font-medium tracking-wide uppercase">Real Estate Platform</span>
+          </div>
+        </div>
 
-          {/* Mobile Menu Button */}
-          <div className="flex items-center md:hidden gap-2">
+        {/* Navigation Links */}
+        <nav className="hidden md:flex items-center gap-1 bg-slate-950/60 p-1.5 rounded-full border border-slate-800/60">
+          <button
+            onClick={() => setActiveTab('home')}
+            className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
+              activeTab === 'home'
+                ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
+                : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            Home
+          </button>
+
+          <button
+            onClick={() => setActiveTab('search')}
+            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
+              activeTab === 'search'
+                ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
+                : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <Search className="w-3.5 h-3.5" />
+            Explore Properties
+          </button>
+
+          {currentUser.role === 'buyer' && (
             <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-300"
+              onClick={() => setActiveTab('buyer-dashboard')}
+              className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                activeTab === 'buyer-dashboard'
+                  ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+              }`}
             >
-              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              <LayoutDashboard className="w-3.5 h-3.5" />
+              My Visits & Saved
+            </button>
+          )}
+
+          {currentUser.role === 'seller' && (
+            <button
+              onClick={() => setActiveTab('seller-dashboard')}
+              className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                activeTab === 'seller-dashboard'
+                  ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+              }`}
+            >
+              <LayoutDashboard className="w-3.5 h-3.5" />
+              Seller Studio
+            </button>
+          )}
+
+          {currentUser.role === 'admin' && (
+            <button
+              onClick={() => setActiveTab('admin-dashboard')}
+              className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                activeTab === 'admin-dashboard'
+                  ? 'bg-rose-500 text-white shadow-md shadow-rose-500/20'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+              }`}
+            >
+              <Shield className="w-3.5 h-3.5" />
+              Admin Portal
+            </button>
+          )}
+        </nav>
+
+        {/* Action Widgets */}
+        <div className="flex items-center gap-2.5">
+          {(currentUser.role === 'seller' || currentUser.role === 'admin') && (
+            <button
+              onClick={() => openFormModal(null)}
+              className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold text-xs shadow-lg shadow-emerald-500/20 transition-all transform hover:-translate-y-0.5"
+            >
+              <PlusCircle className="w-4 h-4" />
+              List Property
+            </button>
+          )}
+
+          <button
+            onClick={openCompareModal}
+            className="relative p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/60 transition-colors"
+            title="Compare Properties"
+          >
+            <Scale className="w-4 h-4" />
+            {compareProperties.length > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 bg-emerald-500 text-slate-950 text-[10px] font-extrabold w-4 h-4 rounded-full flex items-center justify-center shadow">
+                {compareProperties.length}
+              </span>
+            )}
+          </button>
+
+          <button
+            onClick={() => setActiveTab('buyer-dashboard')}
+            className="relative p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-rose-400 border border-slate-700/60 transition-colors"
+            title="Favorites"
+          >
+            <Heart className="w-4 h-4" />
+            {userFavorites.length > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 bg-rose-500 text-white text-[10px] font-extrabold w-4 h-4 rounded-full flex items-center justify-center shadow">
+                {userFavorites.length}
+              </span>
+            )}
+          </button>
+
+          <button
+            onClick={() => openChatWithSeller({
+              id: 'usr_seller_1',
+              email: 'sarah.realty@example.com',
+              name: 'Sarah Jenkins',
+              phone: '+1 (555) 876-5432',
+              role: 'seller',
+              avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=300&q=80',
+              isVerified: true,
+              isSuspended: false,
+              createdAt: ''
+            })}
+            className="relative p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-emerald-400 border border-slate-700/60 transition-colors"
+            title="Chat Inbox"
+          >
+            <MessageSquare className="w-4 h-4" />
+            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full animate-ping" />
+            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-500 rounded-full" />
+          </button>
+
+          <div className="pl-2 border-l border-slate-800 flex items-center gap-2">
+            <button
+              onClick={() => openAuthModal('login')}
+              className="flex items-center gap-2 p-1 pl-2.5 pr-1.5 rounded-full bg-slate-800/90 border border-slate-700/80 hover:border-slate-600 transition-all"
+            >
+              <span className="text-xs font-semibold text-slate-200 hidden sm:inline">{currentUser.name.split(' ')[0]}</span>
+              <img
+                src={currentUser.avatar}
+                alt={currentUser.name}
+                className="w-7 h-7 rounded-full object-cover border border-slate-600"
+              />
             </button>
           </div>
         </div>
       </div>
-
-      {/* Mobile Drawer */}
-      {mobileMenuOpen && (
-        <div className="md:hidden bg-slate-950 border-b border-slate-800 p-4 space-y-3">
-          <Link
-            to="/"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block text-sm font-semibold text-slate-200 py-2 border-b border-slate-800"
-          >
-            Portal Gateway Landing Page
-          </Link>
-          <Link
-            to="/marketplace"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block text-sm font-semibold text-slate-200 py-2 border-b border-slate-800"
-          >
-            Search & Browse Properties
-          </Link>
-          {isAuthenticated ? (
-            <>
-              <Link
-                to={getDashboardPath()}
-                onClick={() => setMobileMenuOpen(false)}
-                className="block text-sm font-semibold text-emerald-400 py-2 border-b border-slate-800"
-              >
-                {currentUser.role.toUpperCase()} Dashboard
-              </Link>
-              <button
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  handleSignOut();
-                }}
-                className="block w-full text-left text-sm font-semibold text-rose-400 py-2"
-              >
-                Sign Out
-              </button>
-            </>
-          ) : (
-            <Link
-              to="/"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block text-sm font-semibold text-emerald-400 py-2"
-            >
-              Sign In to Portal
-            </Link>
-          )}
-        </div>
-      )}
     </header>
   );
 };

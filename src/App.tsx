@@ -1,151 +1,96 @@
-import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useNavigate, useParams } from 'react-router-dom';
+import React, { useState } from 'react';
 import { RoleSwitcherBar } from './components/layout/RoleSwitcherBar';
 import { Navbar } from './components/layout/Navbar';
 import { Footer } from './components/layout/Footer';
 import { ToastContainer } from './components/common/ToastContainer';
-import { ProtectedRoute } from './components/auth/ProtectedRoute';
 
-// Gateway & Public Pages
-import { Gateway } from './pages/Gateway';
+// Pages
 import { HomePage } from './pages/HomePage';
 import { SearchPage } from './pages/SearchPage';
 import { PropertyDetailPage } from './pages/PropertyDetailPage';
-
-// Dedicated Isolated Auth Pages
-import { BuyerLoginPage } from './pages/auth/BuyerLoginPage';
-import { BuyerRegisterPage } from './pages/auth/BuyerRegisterPage';
-import { SellerLoginPage } from './pages/auth/SellerLoginPage';
-import { SellerRegisterPage } from './pages/auth/SellerRegisterPage';
-import { AdminLoginPage } from './pages/auth/AdminLoginPage';
-
-// Role Dashboards
 import { BuyerDashboardPage } from './pages/BuyerDashboardPage';
 import { SellerDashboardPage } from './pages/SellerDashboardPage';
 import { AdminDashboardPage } from './pages/AdminDashboardPage';
+import { AuthPage } from './pages/AuthPage';
 
-// Drawers & Modals
+// Modals & Drawers
 import { ChatDrawer } from './components/chat/ChatDrawer';
 import { PropertyCompareModal } from './components/property/PropertyCompareModal';
 import { PropertyFormModal } from './components/seller/PropertyFormModal';
 
-// Stores
+// Stores & Types
+import { useAuthStore } from './store/useAuthStore';
 import { usePropertyStore } from './store/usePropertyStore';
+import type { Property } from './types';
 
-function PropertyDetailWrapper() {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const { properties } = usePropertyStore();
+export function App() {
+  const [activeTab, setActiveTab] = useState<string>('home');
+  const [searchParams, setSearchParams] = useState<{ query?: string; city?: string; type?: string }>({});
 
-  const property = properties.find((p) => p.id === id);
+  const { isAuthModalOpen, closeAuthModal } = useAuthStore();
+  const { selectedProperty, setSelectedProperty } = usePropertyStore();
 
-  if (!property) {
-    return <Navigate to="/marketplace" replace />;
-  }
-
-  return (
-    <PropertyDetailPage
-      property={property}
-      onBack={() => navigate(-1)}
-    />
-  );
-}
-
-function MainLayout() {
-  const navigate = useNavigate();
-  const { setSelectedProperty } = usePropertyStore();
-
-  const handleSelectProperty = (property: any) => {
+  const handleSelectProperty = (property: Property) => {
     setSelectedProperty(property);
-    navigate(`/property/${property.id}`);
   };
 
-  const handleNavigateToSearch = (query?: string, city?: string, type?: string) => {
-    navigate('/marketplace');
+  const handleNavigateToSearch = (city?: string, type?: string) => {
+    setSearchParams({ city, type });
+    setActiveTab('search');
   };
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-slate-950">
-      {/* 1. Quick Sandbox Role Switcher */}
+      {/* 1. Quick Demo Role Switcher Bar */}
       <RoleSwitcherBar />
 
-      {/* 2. Header Navbar */}
-      <Navbar />
+      {/* 2. Main Navigation Header */}
+      <Navbar activeTab={activeTab} setActiveTab={(tab) => {
+        setSelectedProperty(null);
+        setActiveTab(tab);
+      }} />
 
-      {/* 3. Main Route Content */}
+      {/* 3. Page Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <Routes>
-          {/* Starting Portal Gateway Landing Page */}
-          <Route path="/" element={<Gateway />} />
-
-          {/* Marketplace Catalog & Detailed Search */}
-          <Route
-            path="/marketplace"
-            element={<SearchPage onSelectProperty={handleSelectProperty} />}
+        {selectedProperty ? (
+          <PropertyDetailPage
+            property={selectedProperty}
+            onBack={() => setSelectedProperty(null)}
           />
-          <Route
-            path="/search"
-            element={<SearchPage onSelectProperty={handleSelectProperty} />}
-          />
-          <Route
-            path="/home"
-            element={
+        ) : (
+          <>
+            {activeTab === 'home' && (
               <HomePage
                 onSelectProperty={handleSelectProperty}
-                onNavigateToSearch={handleNavigateToSearch}
+                onNavigateToSearch={(query) => {
+                  setSearchParams({ query });
+                  setActiveTab('search');
+                }}
               />
-            }
-          />
-          <Route path="/property/:id" element={<PropertyDetailWrapper />} />
+            )}
 
-          {/* Isolated Buyer Authentication Suite */}
-          <Route path="/auth/buyer/login" element={<BuyerLoginPage />} />
-          <Route path="/auth/buyer/register" element={<BuyerRegisterPage />} />
+            {activeTab === 'search' && (
+              <SearchPage
+                onSelectProperty={handleSelectProperty}
+                initialSearchQuery={searchParams.query}
+                initialCity={searchParams.city}
+                initialType={searchParams.type}
+              />
+            )}
 
-          {/* Isolated Seller / Agent Authentication Suite */}
-          <Route path="/auth/seller/login" element={<SellerLoginPage />} />
-          <Route path="/auth/seller/register" element={<SellerRegisterPage />} />
+            {activeTab === 'buyer-dashboard' && (
+              <BuyerDashboardPage onSelectProperty={handleSelectProperty} />
+            )}
 
-          {/* Isolated Admin Authentication Suite */}
-          <Route path="/auth/admin/login" element={<AdminLoginPage />} />
+            {activeTab === 'seller-dashboard' && (
+              <SellerDashboardPage onSelectProperty={handleSelectProperty} />
+            )}
 
-          {/* Legacy & Short URL Auth Aliases */}
-          <Route path="/auth/login" element={<Navigate to="/" replace />} />
-          <Route path="/auth/register/buyer" element={<BuyerRegisterPage />} />
-          <Route path="/auth/register/seller" element={<SellerRegisterPage />} />
-          <Route path="/auth/register/admin" element={<AdminLoginPage />} />
-
-          {/* Role-Guarded Dashboards */}
-          <Route
-            path="/dashboard/buyer/*"
-            element={
-              <ProtectedRoute requiredRole="buyer">
-                <BuyerDashboardPage onSelectProperty={handleSelectProperty} />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/dashboard/seller/*"
-            element={
-              <ProtectedRoute requiredRole="seller">
-                <SellerDashboardPage onSelectProperty={handleSelectProperty} />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/dashboard/admin/*"
-            element={
-              <ProtectedRoute requiredRole="admin">
-                <AdminDashboardPage onSelectProperty={handleSelectProperty} />
-              </ProtectedRoute>
-            }
-          />
-
-          {/* Fallback Redirect to Gateway */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+            {activeTab === 'admin-dashboard' && (
+              <AdminDashboardPage onSelectProperty={handleSelectProperty} />
+            )}
+          </>
+        )}
       </main>
 
       {/* 4. Global Footer */}
@@ -155,18 +100,11 @@ function MainLayout() {
       <ChatDrawer />
       <PropertyCompareModal />
       <PropertyFormModal />
+      <AuthPage isOpen={isAuthModalOpen} onClose={closeAuthModal} />
 
-      {/* 6. Toast Notification Host */}
+      {/* 6. Notifications Toast Host */}
       <ToastContainer />
     </div>
-  );
-}
-
-export function App() {
-  return (
-    <BrowserRouter>
-      <MainLayout />
-    </BrowserRouter>
   );
 }
 

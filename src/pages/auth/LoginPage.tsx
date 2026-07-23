@@ -1,18 +1,36 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useNotificationStore } from '../../store/useNotificationStore';
 import type { UserRole } from '../../types';
-import { Building2, ArrowRight, User, Shield, Sparkles } from 'lucide-react';
+import { Building2, ArrowRight } from 'lucide-react';
 
-export const LoginPage: React.FC = () => {
+interface LoginPageProps {
+  forcedRole?: UserRole;
+}
+
+export const LoginPage: React.FC<LoginPageProps> = ({ forcedRole }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { switchRole } = useAuthStore();
   const { addNotification } = useNotificationStore();
 
-  const [email, setEmail] = useState('alex.buyer@example.com');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('password123');
   const [selectedRole, setSelectedRole] = useState<UserRole>('buyer');
+
+  useEffect(() => {
+    if (forcedRole) {
+      setSelectedRole(forcedRole);
+      if (forcedRole === 'buyer') setEmail('alex.buyer@example.com');
+      else if (forcedRole === 'seller') setEmail('sarah.realty@example.com');
+      else if (forcedRole === 'admin') setEmail('admin.platform@estatemarket.com');
+    } else {
+      if (location.pathname.includes('/buyer')) setSelectedRole('buyer');
+      else if (location.pathname.includes('/seller')) setSelectedRole('seller');
+      else if (location.pathname.includes('/admin')) setSelectedRole('admin');
+    }
+  }, [forcedRole, location.pathname]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,9 +46,14 @@ export const LoginPage: React.FC = () => {
   };
 
   const handleGoogleSignIn = () => {
-    switchRole('buyer');
-    addNotification('success', 'Google Sign In', 'Authenticated via Google OAuth.');
-    navigate('/dashboard/buyer');
+    switchRole(selectedRole);
+    addNotification('success', 'Google Sign In', `Authenticated as ${selectedRole.toUpperCase()} via Google.`);
+    const dashboardMap: Record<UserRole, string> = {
+      buyer: '/dashboard/buyer',
+      seller: '/dashboard/seller',
+      admin: '/dashboard/admin',
+    };
+    navigate(dashboardMap[selectedRole]);
   };
 
   return (
@@ -42,12 +65,13 @@ export const LoginPage: React.FC = () => {
               <Building2 className="w-6 h-6 text-emerald-400" />
             </div>
           </div>
-          <h1 className="text-2xl font-extrabold text-white tracking-tight">Sign In to EstateMarket</h1>
-          <p className="text-xs text-slate-400">Unified portal access for Buyers, Sellers, and Admins</p>
+          <h1 className="text-2xl font-extrabold text-white tracking-tight">
+            Sign In ({selectedRole.toUpperCase()} Portal)
+          </h1>
+          <p className="text-xs text-slate-400">Access your dedicated workspace</p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-4 text-xs">
-          {/* Google OAuth Simulation Button */}
           <button
             type="button"
             onClick={handleGoogleSignIn}
@@ -89,7 +113,6 @@ export const LoginPage: React.FC = () => {
             />
           </div>
 
-          {/* Role Selector */}
           <div>
             <label className="block font-semibold text-slate-300 mb-1.5">Sign In Role</label>
             <div className="grid grid-cols-3 gap-2">
@@ -114,34 +137,15 @@ export const LoginPage: React.FC = () => {
             type="submit"
             className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-extrabold text-xs shadow-lg shadow-emerald-500/20 hover:from-emerald-400 hover:to-teal-400 transition-all flex items-center justify-center gap-2"
           >
-            <span>Sign In to Dashboard</span>
+            <span>Sign In to {selectedRole.toUpperCase()} Portal</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </form>
 
-        {/* Dedicated Role Registration Links */}
         <div className="pt-4 border-t border-slate-800 text-center space-y-2 text-xs">
-          <span className="text-slate-400 block">Need an account? Register by role:</span>
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            <Link
-              to="/auth/register/buyer"
-              className="px-3 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-semibold hover:bg-emerald-500/20 transition-all"
-            >
-              Buyer Onboarding
-            </Link>
-            <Link
-              to="/auth/register/seller"
-              className="px-3 py-1.5 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/30 font-semibold hover:bg-amber-500/20 transition-all"
-            >
-              Seller Onboarding
-            </Link>
-            <Link
-              to="/auth/register/admin"
-              className="px-3 py-1.5 rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/30 font-semibold hover:bg-rose-500/20 transition-all"
-            >
-              Admin Invite
-            </Link>
-          </div>
+          <Link to="/auth/login" className="text-slate-400 hover:text-white block font-medium">
+            ← Back to Auth Gateway Portal
+          </Link>
         </div>
       </div>
     </div>

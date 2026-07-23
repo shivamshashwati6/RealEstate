@@ -11,12 +11,12 @@ import { HomePage } from './pages/HomePage';
 import { SearchPage } from './pages/SearchPage';
 import { PropertyDetailPage } from './pages/PropertyDetailPage';
 
-// Isolated Auth Pages per Role
-import { BuyerLoginPage } from './pages/auth/BuyerLoginPage';
-import { BuyerRegisterPage } from './pages/auth/BuyerRegisterPage';
-import { SellerLoginPage } from './pages/auth/SellerLoginPage';
-import { SellerRegisterPage } from './pages/auth/SellerRegisterPage';
-import { AdminLoginPage } from './pages/auth/AdminLoginPage';
+// Auth Pages
+import LoginGateway from './pages/auth/LoginGateway';
+import { LoginPage } from './pages/auth/LoginPage';
+import { RegisterBuyerPage } from './pages/auth/RegisterBuyerPage';
+import { RegisterSellerPage } from './pages/auth/RegisterSellerPage';
+import { RegisterAdminPage } from './pages/auth/RegisterAdminPage';
 
 // Dashboards
 import { BuyerDashboardPage } from './pages/BuyerDashboardPage';
@@ -96,23 +96,27 @@ function MainLayout() {
 
           <Route path="/property/:id" element={<PropertyDetailWrapper />} />
 
-          {/* 3 Completely Isolated Auth Route Suites */}
-          <Route path="/auth/buyer/login" element={<BuyerLoginPage />} />
-          <Route path="/auth/buyer/register" element={<BuyerRegisterPage />} />
+          {/* Auth Gateway & Role-Specific Auth Routes */}
+          <Route path="/auth/login" element={<LoginGateway />} />
+          <Route path="/auth/buyer/login" element={<LoginPage forcedRole="buyer" />} />
+          <Route path="/auth/buyer/register" element={<RegisterBuyerPage />} />
 
-          <Route path="/auth/seller/login" element={<SellerLoginPage />} />
-          <Route path="/auth/seller/register" element={<SellerRegisterPage />} />
+          <Route path="/auth/seller/login" element={<LoginPage forcedRole="seller" />} />
+          <Route path="/auth/seller/register" element={<RegisterSellerPage />} />
 
-          <Route path="/auth/admin/login" element={<AdminLoginPage />} />
+          <Route path="/auth/admin/login" element={<LoginPage forcedRole="admin" />} />
+          <Route path="/auth/admin/register" element={<RegisterAdminPage />} />
 
-          {/* Fallback Auth Redirect */}
-          <Route path="/auth/login" element={<Navigate to="/auth/buyer/login" replace />} />
+          {/* Legacy Auth Fallback Aliases */}
+          <Route path="/auth/register/buyer" element={<RegisterBuyerPage />} />
+          <Route path="/auth/register/seller" element={<RegisterSellerPage />} />
+          <Route path="/auth/register/admin" element={<RegisterAdminPage />} />
 
           {/* Role Protected Dashboard Routes */}
           <Route
             path="/dashboard/buyer/*"
             element={
-              <ProtectedRoute requiredRole="buyer">
+              <ProtectedRoute allowedRoles={['buyer']}>
                 <BuyerDashboardPage onSelectProperty={handleSelectProperty} />
               </ProtectedRoute>
             }
@@ -121,7 +125,7 @@ function MainLayout() {
           <Route
             path="/dashboard/seller/*"
             element={
-              <ProtectedRoute requiredRole="seller">
+              <ProtectedRoute allowedRoles={['seller']}>
                 <SellerDashboardPage onSelectProperty={handleSelectProperty} />
               </ProtectedRoute>
             }
@@ -130,7 +134,7 @@ function MainLayout() {
           <Route
             path="/dashboard/admin/*"
             element={
-              <ProtectedRoute requiredRole="admin">
+              <ProtectedRoute allowedRoles={['admin']}>
                 <AdminDashboardPage onSelectProperty={handleSelectProperty} />
               </ProtectedRoute>
             }
